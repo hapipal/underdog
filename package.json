@@ -1,6 +1,6 @@
 {
   "name": "giver",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,6 +9,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "hoek": "4.x.x",
     "items": "2.x.x"
   }
 }
