@@ -38,6 +38,7 @@
     "http2": "3.x.x"
   },
   "devDependencies": {
+    "boom": "4.x.x",
     "code": "3.x.x",
     "coveralls": "2.x.x",
     "hapi": "15.x.x",
