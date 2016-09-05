@@ -866,4 +866,177 @@ describe('Underdog', () => {
             });
         });
     });
+
+    it('handles relative path for pushed resource with realm prefix.', { plan: 9 }, (done) => {
+
+        const plugin = (srv, opts, next) => {
+
+            srv.route([
+                {
+                    method: 'get',
+                    path: '/',
+                    handler: (request, reply) => {
+
+                        const response = request.generateResponse('body');
+                        reply.push(response, 'push-me');
+
+                        reply(response);
+                    }
+                },
+                {
+                    method: 'get',
+                    path: '/push-me',
+                    handler: (request, reply) => {
+
+                        reply('pushed');
+                    }
+                }
+            ]);
+
+            next();
+        };
+
+        plugin.attributes = { name: 'sven' };
+
+        makeServer(false, (err, srv) => {
+
+            expect(err).to.not.exist();
+
+            srv.register(plugin, { routes: { prefix: '/pre' } }, (err) => {
+
+                expect(err).to.not.exist();
+
+                srv.start((err) => {
+
+                    expect(err).to.not.exist();
+
+                    const port = srv.info.port;
+                    const request = Http2.get({ path: '/pre', port, agent });
+
+                    const next = callNTimes(4, () => {
+
+                        srv.stop(done);
+                    });
+
+                    request.on('response', (response) => {
+
+                        expect(response.statusCode).to.equal(200);
+
+                        response.on('data', (data) => {
+
+                            expect(data.toString()).to.equal('body');
+                            next();
+                        });
+
+                        response.on('end', next);
+                    });
+
+                    request.on('push', (promise) => {
+
+                        expect(promise).to.contain({
+                            method: 'GET',
+                            url: '/pre/push-me',
+                            scheme: 'https',
+                            host: 'localhost'
+                        });
+
+                        expect(promise.headers).to.equal({
+                            host: 'localhost',
+                            'user-agent': 'shot'
+                        });
+
+                        promise.on('response', (pushStream) => {
+
+                            expect(pushStream.statusCode).to.equal(200);
+
+                            pushStream.on('data', (data) => {
+
+                                expect(data.toString()).to.equal('pushed');
+                                next();
+                            });
+
+                            pushStream.on('end', next);
+                        });
+                    });
+                });
+            });
+        });
+    });
+
+    it('handles relative path for pushed resource without realm prefix.', { plan: 7 }, (done) => {
+
+        makeServer([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, reply) => {
+
+                    const response = request.generateResponse('body');
+                    reply.push(response, 'push-me');
+
+                    reply(response);
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request, reply) => {
+
+                    reply('pushed');
+                }
+            }
+        ],
+        (err, srv, port) => {
+
+            expect(err).to.not.exist();
+
+            const request = Http2.get({ path: '/', port, agent });
+
+            const next = callNTimes(4, () => {
+
+                srv.stop(done);
+            });
+
+            request.on('response', (response) => {
+
+                expect(response.statusCode).to.equal(200);
+
+                response.on('data', (data) => {
+
+                    expect(data.toString()).to.equal('body');
+                    next();
+                });
+
+                response.on('end', next);
+            });
+
+            request.on('push', (promise) => {
+
+                expect(promise).to.contain({
+                    method: 'GET',
+                    url: '/push-me',
+                    scheme: 'https',
+                    host: 'localhost'
+                });
+
+                expect(promise.headers).to.equal({
+                    host: 'localhost',
+                    'user-agent': 'shot'
+                });
+
+                promise.on('response', (pushStream) => {
+
+                    expect(pushStream.statusCode).to.equal(200);
+
+                    pushStream.on('data', (data) => {
+
+                        expect(data.toString()).to.equal('pushed');
+                        next();
+                    });
+
+                    pushStream.on('end', next);
+                });
+            });
+        });
+    });
 });
