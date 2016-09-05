@@ -32,7 +32,7 @@ server.register(Underdog, (err) => {
     server.route([
         {
             method: 'get',
-            url: '/',
+            path: '/',
             handler: (request, reply) => {
 
                 const response = reply('<script src="/push-me.js"></script>');
@@ -42,12 +42,12 @@ server.register(Underdog, (err) => {
         },
         {
             method: 'get',
-            url: '/push-me.js',
+            path: '/push-me.js',
             handler: (request, reply) => {
 
                 reply('document.write(\'I was definitely pushed!\');');                
             },
-            // So that we know that it must have been pushed, not requested directly
+            // To demonstrate that it must have been pushed, not requested directly
             config: { isInternal: true }
         }
     ]);
@@ -75,3 +75,8 @@ Note, Underdog utilizes an `onPreResponse` extension to finalize server-push, so
  - `headers` - any headers that you would like to add to the push-request for this resource.  By default a user-agent header is automatically added to match the user-agent of the originating request.
 
  Note that when push-requests are resolved credentials from the originating request will be used, and that routes marked as `isInternal` are accessible.
+
+## Extras
+ - The HTTP/2 spec ([here](http://httpwg.org/specs/rfc7540.html))
+ - The `http2` node module ([here](https://github.com/molnarg/node-http2))
+ - For debugging HTTP/2 in Chrome, see `chrome://net-internals/#http2`
