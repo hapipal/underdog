@@ -12,7 +12,6 @@ const Underdog = require('..');
 // Test shortcuts
 
 const lab = exports.lab = Lab.script();
-const before = lab.before;
 const describe = lab.describe;
 const it = lab.it;
 const expect = Code.expect;
@@ -137,7 +136,7 @@ describe('Underdog', () => {
                     method: 'GET',
                     url: '/push-me',
                     scheme: 'https',
-                    host: 'localhost',
+                    host: 'localhost'
                 });
 
                 expect(promise.headers).to.equal({
@@ -227,7 +226,7 @@ describe('Underdog', () => {
                     method: 'GET',
                     url: '/push-me',
                     scheme: 'https',
-                    host: 'localhost',
+                    host: 'localhost'
                 });
 
                 expect(promise.headers).to.equal({
@@ -303,7 +302,7 @@ describe('Underdog', () => {
                     method: 'GET',
                     url: '/push-me',
                     scheme: 'https',
-                    host: 'localhost',
+                    host: 'localhost'
                 });
 
                 expect(promise.headers).to.equal({
@@ -395,7 +394,7 @@ describe('Underdog', () => {
                 expect(promise).to.contain({
                     method: 'GET',
                     scheme: 'https',
-                    host: 'localhost',
+                    host: 'localhost'
                 });
 
                 expect(promise.headers).to.equal({
@@ -559,7 +558,7 @@ describe('Underdog', () => {
                     method: 'GET',
                     url: '/push-me',
                     scheme: 'https',
-                    host: 'localhost',
+                    host: 'localhost'
                 });
 
                 expect(promise.headers).to.equal({
@@ -656,7 +655,7 @@ describe('Underdog', () => {
                 expect(promise).to.contain({
                     method: 'GET',
                     scheme: 'https',
-                    host: 'localhost',
+                    host: 'localhost'
                 });
 
                 expect(promise.headers).to.equal({
@@ -734,7 +733,7 @@ describe('Underdog', () => {
                     method: 'GET',
                     url: '/push-me',
                     scheme: 'https',
-                    host: 'localhost',
+                    host: 'localhost'
                 });
 
                 expect(promise.headers).to.equal({
@@ -778,8 +777,8 @@ describe('Underdog', () => {
 
                         reply.continue({ credentials: { user: authorization } });
                     }
-                }
-            })
+                };
+            });
 
             srv.auth.strategy('default', 'custom', true, {});
 
@@ -809,7 +808,7 @@ describe('Underdog', () => {
                         reply('pushed');
                     }
                 }
-            ])
+            ]);
 
             srv.start((err) => {
 
@@ -843,7 +842,7 @@ describe('Underdog', () => {
                         method: 'GET',
                         url: '/push-me',
                         scheme: 'https',
-                        host: 'localhost',
+                        host: 'localhost'
                     });
 
                     expect(promise.headers).to.equal({
