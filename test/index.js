@@ -445,7 +445,7 @@ describe('Underdog', () => {
 
             srv.on('request-error', (request, err) => {
 
-                expect(err.message).to.contain('Cannot server-push without a non-error response.');
+                expect(err.message).to.contain('Must server-push with a non-error response.');
             });
 
             const request = Http2.get({ path: '/', port, agent });
@@ -487,7 +487,7 @@ describe('Underdog', () => {
 
             srv.on('request-error', (request, err) => {
 
-                expect(err.message).to.contain('Cannot server-push without a non-error response.');
+                expect(err.message).to.contain('Must server-push with a non-error response.');
             });
 
             const request = Http2.get({ path: '/', port, agent });
