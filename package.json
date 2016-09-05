@@ -1,6 +1,6 @@
 {
   "name": "underdog",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "HTTP/2 server-push for hapi",
   "main": "lib/index.js",
   "directories": {
