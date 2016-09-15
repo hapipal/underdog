@@ -11,7 +11,7 @@ Underdog brings [HTTP/2 server-push](http://httpwg.org/specs/rfc7540.html#PushRe
 ```js
 const Fs = require('fs');
 const Hapi = require('hapi');
-const Http2 = require('http2');
+const Http2 = require('http2'); // Or use node-spdy with h2
 const Underdog = require('underdog');
 
 const listener = Http2.createServer({
@@ -63,6 +63,9 @@ server.register(Underdog, (err) => {
 });
 ```
 
+### Compatibility
+To use Underdog your hapi [connections](http://hapijs.com/api#serverconnectionoptions) must be provided a `listener` adherent to the HTTP/2 protocol.  Currently Underdog is compatible with HTTP/2 listeners created with versions ≥3.4.0 and <4 of [node-spdy](https://github.com/indutny/node-spdy) and 3.x.x of [node-http2](https://github.com/molnarg/node-http2).
+
 ## API
 ### The plugin
 You should register Underdog in any plugin that would like to take advantage of its features; it does not take any options.  Underdog specifies the `once` [plugin attribute](http://hapijs.com/api#plugins), which means hapi will ensure it is not registered multiple times to the same connection.
@@ -79,4 +82,5 @@ Note, Underdog utilizes an `onPreResponse` extension to finalize server-push, so
 ## Extras
  - The HTTP/2 spec ([here](http://httpwg.org/specs/rfc7540.html))
  - The `http2` node module ([here](https://github.com/molnarg/node-http2))
+ - The `spdy` (also implementing HTTP/2) node module ([here](https://github.com/indutny/node-spdy))
  - For debugging HTTP/2 in Chrome, see `chrome://net-internals/#http2`
