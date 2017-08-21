@@ -35,7 +35,7 @@ describe('Underdog', () => {
             cert: '-----BEGIN CERTIFICATE-----\nMIIDBjCCAe4CCQDvLNml6smHlTANBgkqhkiG9w0BAQUFADBFMQswCQYDVQQGEwJV\nUzETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0\ncyBQdHkgTHRkMB4XDTE0MDEyNTIxMjIxOFoXDTE1MDEyNTIxMjIxOFowRTELMAkG\nA1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0\nIFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB\nANFKslwwqlgyqaDUECv33a9DpBuIFug1Gn8Xbnx/RppF/86Cs4P0hS6z4qc0hiDS\nlrcjL6O5j416qlYBNdCwyN1RVfCEen5wEU/gBfAluRzATxrf7H0FuFuKbrwR5AcV\nkltRL23nIDRCEvYUxrx15Bc5uMSdnvQx6dsaFQI0RAu9weyWxYXOWRhnISsPghZg\nIjcrFNA5gYEHGnNHoNqVqE/mBpk3kI+rEVzuu59scv4QNQ7jegOFgSt8DNzuAZ0x\ntHTW1lBG3u8gG1eYBMquexoSSHmMUb73lQ2l/dC6AKjOHFB9Ouq3IjjdFGwx1diz\n/yWh+Y8wY1Mgpyiy6ObJ5W8CAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAoSc6Skb4\ng1e0ZqPKXBV2qbx7hlqIyYpubCl1rDiEdVzqYYZEwmst36fJRRrVaFuAM/1DYAmT\nWMhU+yTfA+vCS4tql9b9zUhPw/IDHpBDWyR01spoZFBF/hE1MGNpCSXXsAbmCiVf\naxrIgR2DNketbDxkQx671KwF1+1JOMo9ffXp+OhuRo5NaGIxhTsZ+f/MA4y084Aj\nDI39av50sTRTWWShlN+J7PtdQVA5SZD97oYbeUeL7gI18kAJww9eUdmT0nEjcwKs\nxsQT1fyKbo7AlZBY4KSlUMuGnn0VnAsB9b+LxtXlDfnjyM8bVQx1uAfRo0DO8p/5\n3J5DTjAU55deBQ==\n-----END CERTIFICATE-----\n'
         };
 
-        const http2Listener = Http2.createServer(creds);
+        // const http2Listener = Http2.createServer(creds);
         const spdyH2Listener = Spdy.createServer({
             key: creds.key,
             cert: creds.cert,
@@ -46,7 +46,7 @@ describe('Underdog', () => {
 
         const server = new Hapi.Server({ debug: false });
 
-        server.connection({ listener: http2Listener, tls: true });
+        // server.connection({ listener: http2Listener, tls: true });
         server.connection({ listener: spdyH2Listener, tls: true });
 
         server.register(Underdog, (err) => {
@@ -65,14 +65,22 @@ describe('Underdog', () => {
 
             server.start((err) => {
 
-                const ports = server.connections.map((conn) => conn.info.port);
+                const clients = server.connections.map((conn) => {
 
-                return cb(err, server, ports);
+                    return Http2.connect(server.info.uri, { rejectUnauthorized: false }));
+                };
+
+                return cb(err, server, clients);
             });
         });
     };
 
-    const callNTimes = (limit, done) => {
+    const callNTimes = (limit, cleanup, done) => {
+
+        if (typeof done === 'undefined') {
+            done = cleanup;
+            cleanup = () => null;
+        }
 
         let i = 0;
 
@@ -95,7 +103,23 @@ describe('Underdog', () => {
         };
     };
 
-    const agent = new Http2.Agent({ rejectUnauthorized: false });
+    const expectToStream = (stream, expectedContent, cb) => {
+
+        let content = '';
+
+        stream.on('data', (data) => {
+
+            content += data.toString();
+        });
+
+        stream.on('end', () => {
+
+            expect(content).to.equal(expectedContent);
+            return cb();
+        });
+
+        stream.on('error', cb);
+    };
 
     it('pushes complete resource for an explicitly specified response.', { plan: 17 }, (done) => {
 
@@ -271,7 +295,7 @@ describe('Underdog', () => {
         });
     });
 
-    it('pushes resources from internal routes.', { plan: 13 }, (done) => {
+    it.only('pushes resources from internal routes.', { plan: 6 }, (done) => {
 
         makeServer([
             {
@@ -293,54 +317,34 @@ describe('Underdog', () => {
                 config: { isInternal: true }
             }
         ],
-        (err, srv, ports) => {
+        (err, srv, clients) => {
 
             expect(err).to.not.exist();
 
-            Items.parallel(ports, (port, nxt) => {
+            Items.parallel(clients, (client, nxt) => {
 
-                const next = callNTimes(4, nxt);
+                const next = callNTimes(2, client.destroy, nxt);
+                const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+                request.on('response', (headers) => {
 
-                request.on('response', (response) => {
-
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
+                    expect(headers[':status']).to.equal(200);
+                    expectToStream(request, 'body', next);
                 });
 
-                request.on('push', (promise) => {
+                client.on('stream', (pushed, reqHeaders) => {
 
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
+                    pushed.on('push', (resHeaders) => {
 
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('pushed');
-                            next();
+                        expect(reqHeaders).to.contain({
+                            ':method': 'GET',
+                            ':path': '/push-me',
+                            ':scheme': 'https',
+                            'user-agent': 'shot'
                         });
 
-                        pushStream.on('end', next);
+                        expect(resHeaders[':status']).to.equal(200);
+                        expectToStream(pushed, 'pushed', next);
                     });
                 });
             }, (err1) => {
