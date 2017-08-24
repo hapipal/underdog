@@ -67,8 +67,8 @@ describe('Underdog', () => {
 
                 const clients = server.connections.map((conn) => {
 
-                    return Http2.connect(server.info.uri, { rejectUnauthorized: false }));
-                };
+                    return Http2.connect(server.info.uri, { rejectUnauthorized: false });
+                });
 
                 return cb(err, server, clients);
             });
@@ -121,7 +121,7 @@ describe('Underdog', () => {
         stream.on('error', cb);
     };
 
-    it('pushes complete resource for an explicitly specified response.', { plan: 17 }, (done) => {
+    it('pushes complete resource for an explicitly specified response.', { plan: 8 }, (done) => {
 
         makeServer([
             {
@@ -145,57 +145,35 @@ describe('Underdog', () => {
                 }
             }
         ],
-        (err, srv, ports) => {
+        (err, srv, clients) => {
 
             expect(err).to.not.exist();
 
-            Items.parallel(ports, (port, nxt) => {
+            Items.parallel(clients, (client, nxt) => {
 
-                const next = callNTimes(4, nxt);
+                const next = callNTimes(2, client.destroy, nxt);
+                const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+                request.on('response', (headers) => {
 
-                request.on('response', (response) => {
-
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
+                    expect(headers[':status']).to.equal(200);
+                    expectToStream(request, 'body', next);
                 });
 
-                request.on('push', (promise) => {
+                client.on('stream', (pushed, reqHeaders) => {
 
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
+                    pushed.on('push', (resHeaders) => {
 
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(201);
-                        expect(pushStream.headers).to.contain({
-                            'x-custom': 'winnie'
+                        expect(reqHeaders).to.contain({
+                            ':method': 'GET',
+                            ':path': '/push-me',
+                            ':scheme': 'https',
+                            'user-agent': 'shot'
                         });
 
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('pushed');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
+                        expect(resHeaders[':status']).to.equal(201);
+                        expect(resHeaders['x-custom']).to.equal('winnie');
+                        expectToStream(pushed, 'pushed', next);
                     });
                 });
             }, (err1) => {
@@ -205,7 +183,7 @@ describe('Underdog', () => {
         });
     });
 
-    it('pushes resource for the request\'s current response.', { plan: 15 }, (done) => {
+    it('pushes resource for the request\'s current response.', { plan: 7 }, (done) => {
 
         makeServer([
             {
@@ -238,54 +216,34 @@ describe('Underdog', () => {
                 }
             }
         ],
-        (err, srv, ports) => {
+        (err, srv, clients) => {
 
             expect(err).to.not.exist();
 
-            Items.parallel(ports, (port, nxt) => {
+            Items.parallel(clients, (client, nxt) => {
 
-                const next = callNTimes(4, nxt);
+                const next = callNTimes(2, client.destroy, nxt);
+                const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+                request.on('response', (headers) => {
 
-                request.on('response', (response) => {
-
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
+                    expect(headers[':status']).to.equal(200);
+                    expectToStream(request, 'body', next);
                 });
 
-                request.on('push', (promise) => {
+                client.on('stream', (pushed, reqHeaders) => {
 
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
+                    pushed.on('push', (resHeaders) => {
 
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('pushed');
-                            next();
+                        expect(reqHeaders).to.contain({
+                            ':method': 'GET',
+                            ':path': '/push-me',
+                            ':scheme': 'https',
+                            'user-agent': 'shot'
                         });
 
-                        pushStream.on('end', next);
+                        expect(resHeaders[':status']).to.equal(200);
+                        expectToStream(pushed, 'pushed', next);
                     });
                 });
             }, (err1) => {
@@ -295,7 +253,7 @@ describe('Underdog', () => {
         });
     });
 
-    it.only('pushes resources from internal routes.', { plan: 6 }, (done) => {
+    it('pushes resources from internal routes.', { plan: 6 }, (done) => {
 
         makeServer([
             {
@@ -354,7 +312,7 @@ describe('Underdog', () => {
         });
     });
 
-    it('pushes multiple resources.', { plan: 25 }, (done) => {
+    it('pushes multiple resources.', { plan: 9 }, (done) => {
 
         makeServer([
             {
@@ -384,62 +342,55 @@ describe('Underdog', () => {
                 }
             }
         ],
-        (err, srv, ports) => {
+        (err, srv, clients) => {
 
             expect(err).to.not.exist();
 
-            Items.parallel(ports, (port, nxt) => {
+            Items.parallel(clients, (client, nxt) => {
 
-                const next = callNTimes(6, nxt);
+                const next = callNTimes(3, client.destroy, nxt);
+                const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+                request.on('response', (headers) => {
 
-                request.on('response', (response) => {
-
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
+                    expect(headers[':status']).to.equal(200);
+                    expectToStream(request, 'body', next);
                 });
 
-                const allowed = ['/push-me', '/push-me-again'];
+                client.on('stream', (pushed, reqHeaders) => {
 
-                request.on('push', (promise) => {
+                    pushed.on('push', (resHeaders) => {
 
-                    const url = promise.url;
+                        if (reqHeaders[':path'] !== '/push-me') {
+                            return;
+                        }
 
-                    expect(allowed).to.contain(url);
-
-                    // Do not allow same url twice
-                    allowed.splice(allowed.indexOf(url), 1);
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal((url === '/push-me') ? 'pushed' : 'pushed again');
-                            next();
+                        expect(reqHeaders).to.contain({
+                            ':method': 'GET',
+                            ':path': '/push-me',
+                            ':scheme': 'https',
+                            'user-agent': 'shot'
                         });
 
-                        pushStream.on('end', next);
+                        expect(resHeaders[':status']).to.equal(200);
+                        expectToStream(pushed, 'pushed', next);
+                    });
+
+                    pushed.on('push', (resHeaders) => {
+
+                        if (reqHeaders[':path'] !== '/push-me-again') {
+                            return;
+                        }
+
+                        expect(reqHeaders).to.contain({
+                            ':method': 'GET',
+                            ':path': '/push-me-again',
+                            ':scheme': 'https',
+                            'user-agent': 'shot'
+                        });
+
+                        expect(resHeaders[':status']).to.equal(200);
+                        expectToStream(pushed, 'pushed again', next);
                     });
                 });
             }, (err1) => {
@@ -449,7 +400,7 @@ describe('Underdog', () => {
         });
     });
 
-    it('does not allow pushing without a response.', { plan: 3 }, (done) => {
+    it.only('does not allow pushing without a response.', { plan: 3 }, (done) => {
 
         makeServer([
             {
@@ -470,27 +421,36 @@ describe('Underdog', () => {
                 }
             }
         ],
-        (err, srv, ports) => {
+        (err, srv, clients) => {
 
             expect(err).to.not.exist();
 
+            const next = callNTimes(2, () => {
+
+                clients.forEach((client) => client.destroy());
+                return srv.stop(done);
+            });
+
             srv.on('request-error', (request, err) => {
 
+                console.log(2, err);
                 expect(err.message).to.contain('Must server-push with a non-error response.');
+                return next();
             });
 
+            // TODO specific language in this comment below may need to change.
             // No need to test against spdy and http2 cause we aint pushin
             // Also, https servers don't recover well from these errors :/
-            const port = ports[0];
-            const request = Http2.get({ path: '/', port, agent });
+            const request = clients[0].request({ ':path': '/' });
 
-            request.on('response', (response) => {
+            request.on('response', (headers) => {
 
-                expect(response.statusCode).to.equal(500);
-                srv.stop(done);
+                console.log(1, headers);
+                expect(headers[':status']).to.equal(500);
+                return next();
             });
 
-            request.on('push', () => next(new Error('Should not make it here')));
+            request.on('push', () => done(new Error('Should not make it here')));
         });
     });
 
@@ -529,13 +489,13 @@ describe('Underdog', () => {
             const port = ports[0];
             const request = Http2.get({ path: '/', port, agent });
 
-            request.on('response', (response) => {
+            request.on('response', (headers) => {
 
-                expect(response.statusCode).to.equal(500);
+                expect(headers[':status']).to.equal(500);
                 srv.stop(done);
             });
 
-            request.on('push', () => next(new Error('Should not make it here')));
+            request.on('push', () => done(new Error('Should not make it here')));
         });
     });
 
