@@ -37,7 +37,7 @@
     "hapi": ">=10 <17"
   },
   "devDependencies": {
-    "boom": "6.x.x",
+    "boom": "5.x.x",
     "code": "4.x.x",
     "coveralls": "3.x.x",
     "hapi": "15.x.x",
