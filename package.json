@@ -34,7 +34,7 @@
     "items": "2.x.x"
   },
   "peerDependencies": {
-    "hapi": ">=10 <17"
+    "hapi": ">=10 <16"
   },
   "devDependencies": {
     "boom": "5.x.x",

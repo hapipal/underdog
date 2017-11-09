@@ -486,7 +486,7 @@ describe('Underdog', () => {
                 srv.stop(done);
             });
 
-            request.on('push', () => new Error('Should not make it here'));
+            request.on('push', () => done(new Error('Should not make it here')));
         });
     });
 
@@ -531,7 +531,7 @@ describe('Underdog', () => {
                 srv.stop(done);
             });
 
-            request.on('push', () => new Error('Should not make it here'));
+            request.on('push', () => done(new Error('Should not make it here')));
         });
     });
 
