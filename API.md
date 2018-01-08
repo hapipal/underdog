@@ -1,10 +1,11 @@
-# API
-## `Underdog`
-### The hapi plugin
+# API Reference
+## The hapi plugin
+### Registration
 You should register Underdog in any plugin that would like to take advantage of its features; it does not take any options.  Underdog specifies the `once` [plugin attribute](https://github.com/hapijs/hapi/blob/master/API.md#plugins), which means hapi will ensure it is not registered multiple times.
 
 Note, Underdog utilizes an `onPreResponse` extension to finalize server-push, so if you modify the response in an `onPreResponse` extension and would like that response to push additional resources, you must specify `{ before: 'underdog' }` as an option when calling [`server.ext()`](https://github.com/hapijs/hapi/blob/master/API.md#server.ext()).
 
+### Response toolkit decorations
 #### `h.push([response], path, [headers])`
  - `response` - the hapi [response](https://github.com/hapijs/hapi/blob/master/API.md#response-object) for which you'd like to push additional resources.  Should not be an error response.  When this argument is omitted Underdog will attempt to use the request's currently set response, which will fail with an error if there is no such response.
  - `path` - the path to another resource living on the same connection as the current request that you'd like to server-push.  If the path is relative (does not begin with `/`) then it is adjusted based upon the relevant [realm's](https://github.com/hapijs/hapi/blob/master/API.md#server.realm) route prefix.
