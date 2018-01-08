@@ -3,6 +3,9 @@
   "version": "1.1.0",
   "description": "HTTP/2 server-push for hapi",
   "main": "lib/index.js",
+  "engines": {
+    "node": ">=8.9.0"
+  },
   "directories": {
     "test": "test"
   },
@@ -30,19 +33,19 @@
   },
   "homepage": "https://github.com/devinivy/underdog#readme",
   "dependencies": {
-    "hoek": "4.x.x",
-    "items": "2.x.x"
+    "hoek": "5.x.x"
   },
   "peerDependencies": {
-    "hapi": ">=10 <16"
+    "hapi": ">=17 <18"
   },
   "devDependencies": {
-    "boom": "4.x.x",
-    "code": "3.x.x",
-    "coveralls": "2.x.x",
-    "hapi": "15.x.x",
-    "http2": "3.x.x",
-    "lab": "11.x.x",
-    "spdy": ">=3.4.0 <4"
+    "boom": "5.x.x",
+    "code": "5.x.x",
+    "coveralls": "3.x.x",
+    "eslint-config-hapi": "11.x.x",
+    "eslint-plugin-hapi": "4.x.x",
+    "hapi": "17.x.x",
+    "lab": "15.x.x",
+    "toys": ">=2.1.1 <3"
   }
 }
