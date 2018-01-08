@@ -3,7 +3,11 @@ HTTP/2 server-push for hapi
 
 [![Build Status](https://travis-ci.org/devinivy/underdog.svg?branch=master)](https://travis-ci.org/devinivy/underdog) [![Coverage Status](https://coveralls.io/repos/devinivy/underdog/badge.svg?branch=master&service=github)](https://coveralls.io/github/devinivy/underdog?branch=master)
 
+Lead Maintainer - [Devin Ivy](https://github.com/devinivy)
+
 ## Usage
+> See also the [API Reference](API.md)
+
 Underdog brings [HTTP/2 server-push](http://httpwg.org/specs/rfc7540.html#PushResources) to hapijs.  The way it works is that you specify paths to resources that you'd like to push alongside a particular response.  This is achieved with a call to the response toolkit decoration [`h.push()`](API.md#hpushresponse-path-headers).  Before hapi responds to the original request, those push-requests will be made internally and their results will be streamed to the client as push-responses.  Even pushed resources can specify additional resources to push.  You can't make this stuff up!
 
 ### Example
