@@ -322,6 +322,81 @@ describe('Underdog', () => {
         ]);
     });
 
+    it('pushes multiple resources with an array of paths.', { plan: 8 }, async (flags) => {
+
+        const { server, client } = await makeServer([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, h) => {
+
+                    const response = h.response('body');
+
+                    h.push(response, [
+                        '/push-me',
+                        '/push-me-again'
+                    ]);
+
+                    return response;
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request) => 'pushed'
+            },
+            {
+                method: 'get',
+                path: '/push-me-again',
+                handler: (request) => 'pushed again'
+            }
+        ]);
+
+        flags.onCleanup = async () => {
+
+            client.destroy();
+            await server.stop();
+        };
+
+        const request = client.request({ ':path': '/' });
+
+        const [
+            headers,
+            [
+                [pushed1, push1ReqHeaders, push1ResHeaders],
+                [pushed2, push2ReqHeaders, push2ResHeaders]
+            ]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client, 2)
+        ]);
+
+        expect(headers[':status']).to.equal(200);
+
+        expect(push1ReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(push2ReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me-again',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(push1ResHeaders[':status']).to.equal(200);
+        expect(push2ResHeaders[':status']).to.equal(200);
+
+        await Promise.all([
+            expectToStream(request, 'body'),
+            expectToStream(pushed1, 'pushed'),
+            expectToStream(pushed2, 'pushed again')
+        ]);
+    });
+
     it('does not allow pushing without a response.', { plan: 2 }, async (flags) => {
 
         const { server, client } = await makeServer([
