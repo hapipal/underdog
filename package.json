@@ -34,13 +34,13 @@
     "items": "2.x.x"
   },
   "peerDependencies": {
-    "hapi": ">=10 <16"
+    "hapi": ">=10 <17"
   },
   "devDependencies": {
     "boom": "5.x.x",
     "code": "4.x.x",
     "coveralls": "3.x.x",
-    "hapi": "15.x.x",
+    "hapi": "16.x.x",
     "http2": "3.x.x",
     "lab": "14.x.x",
     "spdy": ">=3.4.0 <4"

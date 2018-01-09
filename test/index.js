@@ -46,8 +46,8 @@ describe('Underdog', () => {
 
         const server = new Hapi.Server({ debug: false });
 
-        server.connection({ listener: http2Listener, tls: true });
-        server.connection({ listener: spdyH2Listener, tls: true });
+        server.connection({ listener: http2Listener });
+        server.connection({ listener: spdyH2Listener });
 
         server.register(Underdog, (err) => {
 
@@ -361,6 +361,104 @@ describe('Underdog', () => {
                     const response = reply('body');
                     reply.push(response, '/push-me');
                     reply.push(response, '/push-me-again');
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request, reply) => {
+
+                    reply('pushed');
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me-again',
+                handler: (request, reply) => {
+
+                    reply('pushed again');
+                }
+            }
+        ],
+        (err, srv, ports) => {
+
+            expect(err).to.not.exist();
+
+            Items.parallel(ports, (port, nxt) => {
+
+                const next = callNTimes(6, nxt);
+
+                const request = Http2.get({ path: '/', port, agent });
+
+                request.on('response', (response) => {
+
+                    expect(response.statusCode).to.equal(200);
+
+                    response.on('data', (data) => {
+
+                        expect(data.toString()).to.equal('body');
+                        next();
+                    });
+
+                    response.on('end', next);
+                });
+
+                const allowed = ['/push-me', '/push-me-again'];
+
+                request.on('push', (promise) => {
+
+                    const url = promise.url;
+
+                    expect(allowed).to.contain(url);
+
+                    // Do not allow same url twice
+                    allowed.splice(allowed.indexOf(url), 1);
+
+                    expect(promise).to.contain({
+                        method: 'GET',
+                        scheme: 'https',
+                        host: 'localhost'
+                    });
+
+                    expect(promise.headers).to.equal({
+                        host: 'localhost',
+                        'user-agent': 'shot'
+                    });
+
+                    promise.on('response', (pushStream) => {
+
+                        expect(pushStream.statusCode).to.equal(200);
+
+                        pushStream.on('data', (data) => {
+
+                            expect(data.toString()).to.equal((url === '/push-me') ? 'pushed' : 'pushed again');
+                            next();
+                        });
+
+                        pushStream.on('end', next);
+                    });
+                });
+            }, (err1) => {
+
+                srv.stop((err2) => done(err1 || err2));
+            });
+        });
+    });
+
+    it('pushes multiple resources with an array of paths.', { plan: 25 }, (done) => {
+
+        makeServer([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, reply) => {
+
+                    const response = reply('body');
+
+                    reply.push(response, [
+                        '/push-me',
+                        '/push-me-again'
+                    ]);
                 }
             },
             {
