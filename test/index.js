@@ -4,11 +4,12 @@
 
 const Lab = require('lab');
 const Code = require('code');
-const Items = require('items');
 const Hapi = require('hapi');
 const Boom = require('boom');
+const Toys = require('toys');
+const Http = require('http');
+const Https = require('https');
 const Http2 = require('http2');
-const Spdy = require('spdy');
 const Underdog = require('..');
 
 // Test shortcuts
@@ -22,184 +23,137 @@ const internals = {};
 
 describe('Underdog', () => {
 
-    const makeServer = (noStart, routes, cb) => {
+    const creds = {
+        key: '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA0UqyXDCqWDKpoNQQK/fdr0OkG4gW6DUafxdufH9GmkX/zoKz\ng/SFLrPipzSGINKWtyMvo7mPjXqqVgE10LDI3VFV8IR6fnART+AF8CW5HMBPGt/s\nfQW4W4puvBHkBxWSW1EvbecgNEIS9hTGvHXkFzm4xJ2e9DHp2xoVAjREC73B7JbF\nhc5ZGGchKw+CFmAiNysU0DmBgQcac0eg2pWoT+YGmTeQj6sRXO67n2xy/hA1DuN6\nA4WBK3wM3O4BnTG0dNbWUEbe7yAbV5gEyq57GhJIeYxRvveVDaX90LoAqM4cUH06\n6rciON0UbDHV2LP/JaH5jzBjUyCnKLLo5snlbwIDAQABAoIBAQDJm7YC3pJJUcxb\nc8x8PlHbUkJUjxzZ5MW4Zb71yLkfRYzsxrTcyQA+g+QzA4KtPY8XrZpnkgm51M8e\n+B16AcIMiBxMC6HgCF503i16LyyJiKrrDYfGy2rTK6AOJQHO3TXWJ3eT3BAGpxuS\n12K2Cq6EvQLCy79iJm7Ks+5G6EggMZPfCVdEhffRm2Epl4T7LpIAqWiUDcDfS05n\nNNfAGxxvALPn+D+kzcSF6hpmCVrFVTf9ouhvnr+0DpIIVPwSK/REAF3Ux5SQvFuL\njPmh3bGwfRtcC5d21QNrHdoBVSN2UBLmbHUpBUcOBI8FyivAWJhRfKnhTvXMFG8L\nwaXB51IZAoGBAP/E3uz6zCyN7l2j09wmbyNOi1AKvr1WSmuBJveITouwblnRSdvc\nsYm4YYE0Vb94AG4n7JIfZLKtTN0xvnCo8tYjrdwMJyGfEfMGCQQ9MpOBXAkVVZvP\ne2k4zHNNsfvSc38UNSt7K0HkVuH5BkRBQeskcsyMeu0qK4wQwdtiCoBDAoGBANF7\nFMppYxSW4ir7Jvkh0P8bP/Z7AtaSmkX7iMmUYT+gMFB5EKqFTQjNQgSJxS/uHVDE\nSC5co8WGHnRk7YH2Pp+Ty1fHfXNWyoOOzNEWvg6CFeMHW2o+/qZd4Z5Fep6qCLaa\nFvzWWC2S5YslEaaP8DQ74aAX4o+/TECrxi0z2lllAoGAdRB6qCSyRsI/k4Rkd6Lv\nw00z3lLMsoRIU6QtXaZ5rN335Awyrfr5F3vYxPZbOOOH7uM/GDJeOJmxUJxv+cia\nPQDflpPJZU4VPRJKFjKcb38JzO6C3Gm+po5kpXGuQQA19LgfDeO2DNaiHZOJFrx3\nm1R3Zr/1k491lwokcHETNVkCgYBPLjrZl6Q/8BhlLrG4kbOx+dbfj/euq5NsyHsX\n1uI7bo1Una5TBjfsD8nYdUr3pwWltcui2pl83Ak+7bdo3G8nWnIOJ/WfVzsNJzj7\n/6CvUzR6sBk5u739nJbfgFutBZBtlSkDQPHrqA7j3Ysibl3ZIJlULjMRKrnj6Ans\npCDwkQKBgQCM7gu3p7veYwCZaxqDMz5/GGFUB1My7sK0hcT7/oH61yw3O8pOekee\nuctI1R3NOudn1cs5TAy/aypgLDYTUGQTiBRILeMiZnOrvQQB9cEf7TFgDoRNCcDs\nV/ZWiegVB/WY7H0BkCekuq5bHwjgtJTpvHGqQ9YD7RhE8RSYOhdQ/Q==\n-----END RSA PRIVATE KEY-----\n',
+        cert: '-----BEGIN CERTIFICATE-----\nMIIDBjCCAe4CCQDvLNml6smHlTANBgkqhkiG9w0BAQUFADBFMQswCQYDVQQGEwJV\nUzETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0\ncyBQdHkgTHRkMB4XDTE0MDEyNTIxMjIxOFoXDTE1MDEyNTIxMjIxOFowRTELMAkG\nA1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0\nIFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB\nANFKslwwqlgyqaDUECv33a9DpBuIFug1Gn8Xbnx/RppF/86Cs4P0hS6z4qc0hiDS\nlrcjL6O5j416qlYBNdCwyN1RVfCEen5wEU/gBfAluRzATxrf7H0FuFuKbrwR5AcV\nkltRL23nIDRCEvYUxrx15Bc5uMSdnvQx6dsaFQI0RAu9weyWxYXOWRhnISsPghZg\nIjcrFNA5gYEHGnNHoNqVqE/mBpk3kI+rEVzuu59scv4QNQ7jegOFgSt8DNzuAZ0x\ntHTW1lBG3u8gG1eYBMquexoSSHmMUb73lQ2l/dC6AKjOHFB9Ouq3IjjdFGwx1diz\n/yWh+Y8wY1Mgpyiy6ObJ5W8CAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAoSc6Skb4\ng1e0ZqPKXBV2qbx7hlqIyYpubCl1rDiEdVzqYYZEwmst36fJRRrVaFuAM/1DYAmT\nWMhU+yTfA+vCS4tql9b9zUhPw/IDHpBDWyR01spoZFBF/hE1MGNpCSXXsAbmCiVf\naxrIgR2DNketbDxkQx671KwF1+1JOMo9ffXp+OhuRo5NaGIxhTsZ+f/MA4y084Aj\nDI39av50sTRTWWShlN+J7PtdQVA5SZD97oYbeUeL7gI18kAJww9eUdmT0nEjcwKs\nxsQT1fyKbo7AlZBY4KSlUMuGnn0VnAsB9b+LxtXlDfnjyM8bVQx1uAfRo0DO8p/5\n3J5DTjAU55deBQ==\n-----END CERTIFICATE-----\n'
+    };
 
-        if (typeof cb === 'undefined') {
-            cb = routes;
-            routes = noStart;
-            noStart = false;
+    const makeServer = async (routes) => {
+
+        const server = Hapi.server({
+            debug: false,
+            listener: Http2.createSecureServer(creds),
+            tls: true
+        });
+
+        await server.register(Underdog);
+
+        if (routes) {
+            server.route(routes);
         }
 
-        const creds = {
-            key: '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA0UqyXDCqWDKpoNQQK/fdr0OkG4gW6DUafxdufH9GmkX/zoKz\ng/SFLrPipzSGINKWtyMvo7mPjXqqVgE10LDI3VFV8IR6fnART+AF8CW5HMBPGt/s\nfQW4W4puvBHkBxWSW1EvbecgNEIS9hTGvHXkFzm4xJ2e9DHp2xoVAjREC73B7JbF\nhc5ZGGchKw+CFmAiNysU0DmBgQcac0eg2pWoT+YGmTeQj6sRXO67n2xy/hA1DuN6\nA4WBK3wM3O4BnTG0dNbWUEbe7yAbV5gEyq57GhJIeYxRvveVDaX90LoAqM4cUH06\n6rciON0UbDHV2LP/JaH5jzBjUyCnKLLo5snlbwIDAQABAoIBAQDJm7YC3pJJUcxb\nc8x8PlHbUkJUjxzZ5MW4Zb71yLkfRYzsxrTcyQA+g+QzA4KtPY8XrZpnkgm51M8e\n+B16AcIMiBxMC6HgCF503i16LyyJiKrrDYfGy2rTK6AOJQHO3TXWJ3eT3BAGpxuS\n12K2Cq6EvQLCy79iJm7Ks+5G6EggMZPfCVdEhffRm2Epl4T7LpIAqWiUDcDfS05n\nNNfAGxxvALPn+D+kzcSF6hpmCVrFVTf9ouhvnr+0DpIIVPwSK/REAF3Ux5SQvFuL\njPmh3bGwfRtcC5d21QNrHdoBVSN2UBLmbHUpBUcOBI8FyivAWJhRfKnhTvXMFG8L\nwaXB51IZAoGBAP/E3uz6zCyN7l2j09wmbyNOi1AKvr1WSmuBJveITouwblnRSdvc\nsYm4YYE0Vb94AG4n7JIfZLKtTN0xvnCo8tYjrdwMJyGfEfMGCQQ9MpOBXAkVVZvP\ne2k4zHNNsfvSc38UNSt7K0HkVuH5BkRBQeskcsyMeu0qK4wQwdtiCoBDAoGBANF7\nFMppYxSW4ir7Jvkh0P8bP/Z7AtaSmkX7iMmUYT+gMFB5EKqFTQjNQgSJxS/uHVDE\nSC5co8WGHnRk7YH2Pp+Ty1fHfXNWyoOOzNEWvg6CFeMHW2o+/qZd4Z5Fep6qCLaa\nFvzWWC2S5YslEaaP8DQ74aAX4o+/TECrxi0z2lllAoGAdRB6qCSyRsI/k4Rkd6Lv\nw00z3lLMsoRIU6QtXaZ5rN335Awyrfr5F3vYxPZbOOOH7uM/GDJeOJmxUJxv+cia\nPQDflpPJZU4VPRJKFjKcb38JzO6C3Gm+po5kpXGuQQA19LgfDeO2DNaiHZOJFrx3\nm1R3Zr/1k491lwokcHETNVkCgYBPLjrZl6Q/8BhlLrG4kbOx+dbfj/euq5NsyHsX\n1uI7bo1Una5TBjfsD8nYdUr3pwWltcui2pl83Ak+7bdo3G8nWnIOJ/WfVzsNJzj7\n/6CvUzR6sBk5u739nJbfgFutBZBtlSkDQPHrqA7j3Ysibl3ZIJlULjMRKrnj6Ans\npCDwkQKBgQCM7gu3p7veYwCZaxqDMz5/GGFUB1My7sK0hcT7/oH61yw3O8pOekee\nuctI1R3NOudn1cs5TAy/aypgLDYTUGQTiBRILeMiZnOrvQQB9cEf7TFgDoRNCcDs\nV/ZWiegVB/WY7H0BkCekuq5bHwjgtJTpvHGqQ9YD7RhE8RSYOhdQ/Q==\n-----END RSA PRIVATE KEY-----\n',
-            cert: '-----BEGIN CERTIFICATE-----\nMIIDBjCCAe4CCQDvLNml6smHlTANBgkqhkiG9w0BAQUFADBFMQswCQYDVQQGEwJV\nUzETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0\ncyBQdHkgTHRkMB4XDTE0MDEyNTIxMjIxOFoXDTE1MDEyNTIxMjIxOFowRTELMAkG\nA1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0\nIFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB\nANFKslwwqlgyqaDUECv33a9DpBuIFug1Gn8Xbnx/RppF/86Cs4P0hS6z4qc0hiDS\nlrcjL6O5j416qlYBNdCwyN1RVfCEen5wEU/gBfAluRzATxrf7H0FuFuKbrwR5AcV\nkltRL23nIDRCEvYUxrx15Bc5uMSdnvQx6dsaFQI0RAu9weyWxYXOWRhnISsPghZg\nIjcrFNA5gYEHGnNHoNqVqE/mBpk3kI+rEVzuu59scv4QNQ7jegOFgSt8DNzuAZ0x\ntHTW1lBG3u8gG1eYBMquexoSSHmMUb73lQ2l/dC6AKjOHFB9Ouq3IjjdFGwx1diz\n/yWh+Y8wY1Mgpyiy6ObJ5W8CAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAoSc6Skb4\ng1e0ZqPKXBV2qbx7hlqIyYpubCl1rDiEdVzqYYZEwmst36fJRRrVaFuAM/1DYAmT\nWMhU+yTfA+vCS4tql9b9zUhPw/IDHpBDWyR01spoZFBF/hE1MGNpCSXXsAbmCiVf\naxrIgR2DNketbDxkQx671KwF1+1JOMo9ffXp+OhuRo5NaGIxhTsZ+f/MA4y084Aj\nDI39av50sTRTWWShlN+J7PtdQVA5SZD97oYbeUeL7gI18kAJww9eUdmT0nEjcwKs\nxsQT1fyKbo7AlZBY4KSlUMuGnn0VnAsB9b+LxtXlDfnjyM8bVQx1uAfRo0DO8p/5\n3J5DTjAU55deBQ==\n-----END CERTIFICATE-----\n'
-        };
+        await server.start();
 
-        const http2Listener = Http2.createServer(creds);
-        const spdyH2Listener = Spdy.createServer({
-            key: creds.key,
-            cert: creds.cert,
-            spdy: {
-                protocols: ['h2']
-            }
-        });
+        const client = Http2.connect(server.info.uri, { rejectUnauthorized: false });
 
-        const server = new Hapi.Server({ debug: false });
-
-        server.connection({ listener: http2Listener });
-        server.connection({ listener: spdyH2Listener });
-
-        server.register(Underdog, (err) => {
-
-            if (err) {
-                return cb(err);
-            }
-
-            if (routes && routes.length) {
-                server.route(routes);
-            }
-
-            if (noStart) {
-                return cb(null, server);
-            }
-
-            server.start((err) => {
-
-                const ports = server.connections.map((conn) => conn.info.port);
-
-                return cb(err, server, ports);
-            });
-        });
+        return { server, client };
     };
 
-    const callNTimes = (limit, done) => {
+    const expectToStream = async (stream, expectedContent) => {
 
-        let i = 0;
+        let content = '';
 
-        return (err) => {
+        stream.on('data', (data) => {
 
-            i++;
+            content += data.toString();
+        });
 
-            if (i > limit) {
-                return done(new Error('Called function too many times'));
-            }
+        await Toys.stream(stream);
 
-            if (err) {
-                i = limit;
-                return done(err);
-            }
-
-            if (i === limit) {
-                return done();
-            }
-        };
+        expect(content).to.equal(expectedContent);
     };
 
-    const agent = new Http2.Agent({ rejectUnauthorized: false });
+    const getPushes = async (client, count = 1) => {
 
-    it('pushes complete resource for an explicitly specified response.', { plan: 17 }, (done) => {
+        const pushes = [];
 
-        makeServer([
+        for (let i = 0; i < count; ++i) {
+            const [pushed, reqHeaders] = await Toys.event(client, 'stream', { multiple: true });
+            pushes.push([pushed, reqHeaders, Toys.event(pushed, 'push')]);
+        }
+
+        return await Promise.all(
+            pushes.map((push) => Promise.all(push))
+        );
+    };
+
+    it('pushes complete resource for an explicitly specified response.', { plan: 9 }, async (flags) => {
+
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = request.generateResponse('body');
-                    const result = reply.push(response, '/push-me');
-                    expect(result).to.shallow.equal(response);
+                    const response = h.response('body');
+                    const result = h.push(response, '/push-me');
 
-                    reply(response);
+                    expect(result).to.only.contain(['allowed', 'response']);
+                    expect(result.allowed).to.equal(true);
+                    expect(result.response).to.shallow.equal(response);
+
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    reply('pushed').header('x-custom', 'winnie').code(201);
+                    return h.response('pushed').header('x-custom', 'winnie').code(201);
                 }
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            Items.parallel(ports, (port, nxt) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                const next = callNTimes(4, nxt);
+        const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
 
-                request.on('response', (response) => {
+        expect(headers[':status']).to.equal(200);
 
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
-                });
-
-                request.on('push', (promise) => {
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(201);
-                        expect(pushStream.headers).to.contain({
-                            'x-custom': 'winnie'
-                        });
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('pushed');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
-
-                srv.stop((err2) => done(err1 || err2));
-            });
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
         });
+
+        expect(pushResHeaders[':status']).to.equal(201);
+        expect(pushResHeaders['x-custom']).to.equal('winnie');
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
     });
 
-    it('pushes resource for the request\'s current response.', { plan: 15 }, (done) => {
+    it('pushes resource for the request\'s current response.', { plan: 7 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
-
-                    reply('body');
-                },
-                config: {
+                handler: (request) => 'body',
+                options: {
                     ext: {
                         onPostHandler: {
-                            method: (request, reply) => {
+                            method: (request, h) => {
 
-                                const response = reply.push('/push-me');
-                                expect(response).to.shallow.equal(request.response);
+                                const result = h.push('/push-me');
+                                expect(result.allowed).to.equal(true);
+                                expect(result.response).to.shallow.equal(request.response);
 
-                                reply.continue();
+                                return h.continue;
                             }
                         }
                     }
@@ -208,985 +162,902 @@ describe('Underdog', () => {
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
-
-                    reply('pushed');
-                }
+                handler: (request) => 'pushed'
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            Items.parallel(ports, (port, nxt) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                const next = callNTimes(4, nxt);
+        const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
 
-                request.on('response', (response) => {
+        expect(headers[':status']).to.equal(200);
 
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
-                });
-
-                request.on('push', (promise) => {
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('pushed');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
-
-                srv.stop((err2) => done(err1 || err2));
-            });
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
         });
+
+        expect(pushResHeaders[':status']).to.equal(200);
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
     });
 
-    it('pushes resources from internal routes.', { plan: 13 }, (done) => {
+    it('pushes resources from internal routes.', { plan: 5 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = reply('body');
-                    reply.push(response, '/push-me');
+                    const response = h.response('body');
+                    h.push(response, '/push-me');
+
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
-
-                    reply('pushed');
-                },
+                handler: (request) => 'pushed',
                 config: { isInternal: true }
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            Items.parallel(ports, (port, nxt) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                const next = callNTimes(4, nxt);
+        const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
 
-                request.on('response', (response) => {
+        expect(headers[':status']).to.equal(200);
 
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
-                });
-
-                request.on('push', (promise) => {
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('pushed');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
-
-                srv.stop((err2) => done(err1 || err2));
-            });
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
         });
+
+        expect(pushResHeaders[':status']).to.equal(200);
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
     });
 
-    it('pushes multiple resources.', { plan: 25 }, (done) => {
+    it('pushes multiple resources.', { plan: 8 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = reply('body');
-                    reply.push(response, '/push-me');
-                    reply.push(response, '/push-me-again');
+                    const response = h.response('body');
+                    h.push(response, '/push-me');
+                    h.push(response, '/push-me-again');
+
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
-
-                    reply('pushed');
-                }
+                handler: (request) => 'pushed'
             },
             {
                 method: 'get',
                 path: '/push-me-again',
-                handler: (request, reply) => {
-
-                    reply('pushed again');
-                }
+                handler: (request) => 'pushed again'
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            Items.parallel(ports, (port, nxt) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                const next = callNTimes(6, nxt);
+        const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+        const [
+            headers,
+            [
+                [pushed1, push1ReqHeaders, push1ResHeaders],
+                [pushed2, push2ReqHeaders, push2ResHeaders]
+            ]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client, 2)
+        ]);
 
-                request.on('response', (response) => {
+        expect(headers[':status']).to.equal(200);
 
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
-                });
-
-                const allowed = ['/push-me', '/push-me-again'];
-
-                request.on('push', (promise) => {
-
-                    const url = promise.url;
-
-                    expect(allowed).to.contain(url);
-
-                    // Do not allow same url twice
-                    allowed.splice(allowed.indexOf(url), 1);
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal((url === '/push-me') ? 'pushed' : 'pushed again');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
-
-                srv.stop((err2) => done(err1 || err2));
-            });
+        expect(push1ReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
         });
+
+        expect(push2ReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me-again',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(push1ResHeaders[':status']).to.equal(200);
+        expect(push2ResHeaders[':status']).to.equal(200);
+
+        await Promise.all([
+            expectToStream(request, 'body'),
+            expectToStream(pushed1, 'pushed'),
+            expectToStream(pushed2, 'pushed again')
+        ]);
     });
 
-    it('pushes multiple resources with an array of paths.', { plan: 25 }, (done) => {
+    it('pushes multiple resources with an array of paths.', { plan: 8 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = reply('body');
+                    const response = h.response('body');
 
-                    reply.push(response, [
+                    h.push(response, [
                         '/push-me',
                         '/push-me-again'
                     ]);
+
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
-
-                    reply('pushed');
-                }
+                handler: (request) => 'pushed'
             },
             {
                 method: 'get',
                 path: '/push-me-again',
-                handler: (request, reply) => {
-
-                    reply('pushed again');
-                }
+                handler: (request) => 'pushed again'
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            Items.parallel(ports, (port, nxt) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                const next = callNTimes(6, nxt);
+        const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+        const [
+            headers,
+            [
+                [pushed1, push1ReqHeaders, push1ResHeaders],
+                [pushed2, push2ReqHeaders, push2ResHeaders]
+            ]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client, 2)
+        ]);
 
-                request.on('response', (response) => {
+        expect(headers[':status']).to.equal(200);
 
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
-                });
-
-                const allowed = ['/push-me', '/push-me-again'];
-
-                request.on('push', (promise) => {
-
-                    const url = promise.url;
-
-                    expect(allowed).to.contain(url);
-
-                    // Do not allow same url twice
-                    allowed.splice(allowed.indexOf(url), 1);
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal((url === '/push-me') ? 'pushed' : 'pushed again');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
-
-                srv.stop((err2) => done(err1 || err2));
-            });
+        expect(push1ReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
         });
+
+        expect(push2ReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me-again',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(push1ResHeaders[':status']).to.equal(200);
+        expect(push2ResHeaders[':status']).to.equal(200);
+
+        await Promise.all([
+            expectToStream(request, 'body'),
+            expectToStream(pushed1, 'pushed'),
+            expectToStream(pushed2, 'pushed again')
+        ]);
     });
 
-    it('does not allow pushing without a response.', { plan: 3 }, (done) => {
+    it('does not allow pushing without a response.', { plan: 2 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    reply.push('/push-me');
-                    reply('body');
+                    h.push('/push-me');
+
+                    return 'body';
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
-
-                    reply('pushed');
-                }
+                handler: (request) => 'pushed'
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            srv.on('request-error', (request, err) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                expect(err.message).to.contain('Must server-push with a non-error response.');
-            });
+        const request = client.request({ ':path': '/' });
 
-            // No need to test against spdy and http2 cause we aint pushin
-            // Also, https servers don't recover well from these errors :/
-            const port = ports[0];
-            const request = Http2.get({ path: '/', port, agent });
+        const [headers, [ignore, event]] = await Promise.all([ // eslint-disable-line no-unused-vars
+            Toys.event(request, 'response'),
+            Toys.event(server.events, { name: 'request', channels: 'error' }, { error: false, multiple: true })
+        ]);
 
-            request.on('response', (response) => {
-
-                expect(response.statusCode).to.equal(500);
-                srv.stop(done);
-            });
-
-            request.on('push', () => done(new Error('Should not make it here')));
-        });
+        expect(headers[':status']).to.equal(500);
+        expect(event.error.message).to.contain('Must server-push with a non-error response.');
     });
 
-    it('does not allow pushing with an error response.', { plan: 3 }, (done) => {
+    it('does not allow pushing with an error response.', { plan: 2 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = reply.push(Boom.notFound(), '/push-me');
-                    reply(response);
+                    const { response } = h.push(Boom.notFound(), '/push-me');
+
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
-
-                    reply('pushed');
-                }
+                handler: (request) => 'pushed'
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            srv.on('request-error', (request, err) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                expect(err.message).to.contain('Must server-push with a non-error response.');
-            });
+        const request = client.request({ ':path': '/' });
 
-            // No need to test against spdy and http2 cause we aint pushin
-            // Also, https servers don't recover well from these errors :/
-            const port = ports[0];
-            const request = Http2.get({ path: '/', port, agent });
+        const [headers, [ignore, event]] = await Promise.all([ // eslint-disable-line no-unused-vars
+            Toys.event(request, 'response'),
+            Toys.event(server.events, { name: 'request', channels: 'error' }, { error: false, multiple: true })
+        ]);
 
-            request.on('response', (response) => {
-
-                expect(response.statusCode).to.equal(500);
-                srv.stop(done);
-            });
-
-            request.on('push', () => done(new Error('Should not make it here')));
-        });
+        expect(headers[':status']).to.equal(500);
+        expect(event.error.message).to.contain('Must server-push with a non-error response.');
     });
 
-    it('pushes specified headers.', { plan: 13 }, (done) => {
+    it('pushes specified headers.', { plan: 5 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = request.generateResponse('body');
-                    reply.push(response, '/push-me', {
+                    const response = h.response('body');
+
+                    h.push(response, '/push-me', {
                         'x-custom': 'pooh',
                         'user-agent': 'lab'
                     });
 
-                    reply(response);
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
-
-                    reply('pushed');
-                }
+                handler: (request) => 'pushed'
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            Items.parallel(ports, (port, nxt) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                const next = callNTimes(4, nxt);
+        const request = client.request({ ':path': '/' });
 
-                const request = Http2.get({ path: '/', port, agent });
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
 
-                request.on('response', (response) => {
+        expect(headers[':status']).to.equal(200);
 
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
-                });
-
-                request.on('push', (promise) => {
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'x-custom': 'pooh',
-                        'user-agent': 'lab'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('pushed');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
-
-                srv.stop((err2) => done(err1 || err2));
-            });
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'x-custom': 'pooh',
+            'user-agent': 'lab'
         });
+
+        expect(pushResHeaders[':status']).to.equal(200);
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
     });
 
-    it('lets pushed resources push more resources.', { plan: 25 }, (done) => {
+    it('lets pushed resources push more resources.', { plan: 8 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = request.generateResponse('body');
-                    reply.push(response, '/push-me');
+                    const response = h.response('body');
+                    h.push(response, '/push-me');
 
-                    reply(response);
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = request.generateResponse('pushed');
-                    reply.push(response, '/push-me-chain');
+                    const response = h.response('pushed');
+                    h.push(response, '/push-me-chain');
 
-                    reply(response);
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me-chain',
-                handler: (request, reply) => {
-
-                    reply('chain');
-                }
+                handler: (request) => 'chain'
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
+        flags.onCleanup = async () => {
 
-            Items.parallel(ports, (port, nxt) => {
-
-                const next = callNTimes(6, nxt);
-
-                const request = Http2.get({ path: '/', port, agent });
-
-                request.on('response', (response) => {
-
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
-                });
-
-                const allowed = ['/push-me', '/push-me-chain'];
-
-                request.on('push', (promise) => {
-
-                    const url = promise.url;
-
-                    expect(allowed).to.contain(url);
-
-                    // Do not allow same url twice
-                    allowed.splice(allowed.indexOf(url), 1);
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal((url === '/push-me') ? 'pushed' : 'chain');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
-
-                srv.stop((err2) => done(err1 || err2));
-            });
-        });
-    });
-
-    it('uses original request\'s user-agent to make push-requests.', { plan: 13 }, (done) => {
-
-        makeServer([
-            {
-                method: 'get',
-                path: '/',
-                handler: (request, reply) => {
-
-                    const response = request.generateResponse('body');
-                    reply.push(response, '/push-me', { 'x-custom': 'pooh' });
-
-                    reply(response);
-                }
-            },
-            {
-                method: 'get',
-                path: '/push-me',
-                handler: (request, reply) => {
-
-                    reply('pushed');
-                }
-            }
-        ],
-        (err, srv, ports) => {
-
-            expect(err).to.not.exist();
-
-            Items.parallel(ports, (port, nxt) => {
-
-                const next = callNTimes(4, nxt);
-
-                const headers = { 'user-agent': 'big-test' };
-                const request = Http2.get({ path: '/', headers, port, agent });
-
-                request.on('response', (response) => {
-
-                    expect(response.statusCode).to.equal(200);
-
-                    response.on('data', (data) => {
-
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
-
-                    response.on('end', next);
-                });
-
-                request.on('push', (promise) => {
-
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
-
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'big-test',
-                        'x-custom': 'pooh'
-                    });
-
-                    promise.on('response', (pushStream) => {
-
-                        expect(pushStream.statusCode).to.equal(200);
-
-                        pushStream.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('pushed');
-                            next();
-                        });
-
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
-
-                srv.stop((err2) => done(err1 || err2));
-            });
-        });
-    });
-
-    it('uses credentials from original request to make push-requests.', { plan: 22 }, (done) => {
-
-        makeServer(false, (err, srv) => {
-
-            expect(err).to.not.exist();
-
-            srv.auth.scheme('custom', () => {
-
-                return {
-                    authenticate: (request, reply) => {
-
-                        const authorization = request.headers.authorization;
-
-                        if (!authorization) {
-                            return reply(Boom.unauthorized(null, 'Custom'));
-                        }
-
-                        reply.continue({ credentials: { user: authorization } });
-                    }
-                };
-            });
-
-            srv.auth.strategy('default', 'custom', true, {});
-
-            srv.route([
-                {
-                    method: 'get',
-                    path: '/',
-                    handler: (request, reply) => {
-
-                        const response = request.generateResponse('body');
-                        reply.push(response, '/push-me');
-
-                        expect(request.auth.isAuthenticated).to.equal(true);
-                        expect(request.auth.credentials).to.equal({ user: 'harper' });
-
-                        reply(response);
-                    }
-                },
-                {
-                    method: 'get',
-                    path: '/push-me',
-                    handler: (request, reply) => {
-
-                        expect(request.auth.isAuthenticated).to.equal(true);
-                        expect(request.auth.credentials).to.equal({ user: 'harper' });
-
-                        reply('pushed');
-                    }
-                }
-            ]);
-
-            srv.start((err) => {
-
-                expect(err).to.not.exist();
-
-                const ports = srv.connections.map((conn) => conn.info.port);
-
-                Items.parallel(ports, (port, nxt) => {
-
-                    const next = callNTimes(4, nxt);
-
-                    const headers = { authorization: 'harper' };
-                    const request = Http2.get({ path: '/', headers, port, agent });
-
-                    request.on('response', (response) => {
-
-                        expect(response.statusCode).to.equal(200);
-
-                        response.on('data', (data) => {
-
-                            expect(data.toString()).to.equal('body');
-                            next();
-                        });
-
-                        response.on('end', next);
-                    });
-
-                    request.on('push', (promise) => {
-
-                        expect(promise).to.contain({
-                            method: 'GET',
-                            url: '/push-me',
-                            scheme: 'https',
-                            host: 'localhost'
-                        });
-
-                        expect(promise.headers).to.equal({
-                            host: 'localhost',
-                            'user-agent': 'shot'
-                        });
-
-                        promise.on('response', (pushStream) => {
-
-                            expect(pushStream.statusCode).to.equal(200);
-
-                            pushStream.on('data', (data) => {
-
-                                expect(data.toString()).to.equal('pushed');
-                                next();
-                            });
-
-                            pushStream.on('end', next);
-                        });
-                    });
-                }, (err1) => {
-
-                    srv.stop((err2) => done(err1 || err2));
-                });
-            });
-        });
-    });
-
-    it('handles relative path for pushed resource with realm prefix.', { plan: 15 }, (done) => {
-
-        const plugin = (srv, opts, next) => {
-
-            srv.route([
-                {
-                    method: 'get',
-                    path: '/',
-                    handler: (request, reply) => {
-
-                        const response = request.generateResponse('body');
-                        reply.push(response, 'push-me');
-
-                        reply(response);
-                    }
-                },
-                {
-                    method: 'get',
-                    path: '/push-me',
-                    handler: (request, reply) => {
-
-                        reply('pushed');
-                    }
-                }
-            ]);
-
-            next();
+            client.destroy();
+            await server.stop();
         };
 
-        plugin.attributes = { name: 'sven' };
+        const request = client.request({ ':path': '/' });
 
-        makeServer(false, (err, srv) => {
+        const [
+            headers,
+            [
+                [pushed1, push1ReqHeaders, push1ResHeaders],
+                [pushed2, push2ReqHeaders, push2ResHeaders]
+            ]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client, 2)
+        ]);
 
-            expect(err).to.not.exist();
+        expect(headers[':status']).to.equal(200);
 
-            srv.register(plugin, { routes: { prefix: '/pre' } }, (err) => {
-
-                expect(err).to.not.exist();
-
-                srv.start((err) => {
-
-                    expect(err).to.not.exist();
-
-                    const ports = srv.connections.map((conn) => conn.info.port);
-
-                    Items.parallel(ports, (port, nxt) => {
-
-                        const next = callNTimes(4, nxt);
-
-                        const request = Http2.get({ path: '/pre', port, agent });
-
-                        request.on('response', (response) => {
-
-                            expect(response.statusCode).to.equal(200);
-
-                            response.on('data', (data) => {
-
-                                expect(data.toString()).to.equal('body');
-                                next();
-                            });
-
-                            response.on('end', next);
-                        });
-
-                        request.on('push', (promise) => {
-
-                            expect(promise).to.contain({
-                                method: 'GET',
-                                url: '/pre/push-me',
-                                scheme: 'https',
-                                host: 'localhost'
-                            });
-
-                            expect(promise.headers).to.equal({
-                                host: 'localhost',
-                                'user-agent': 'shot'
-                            });
-
-                            promise.on('response', (pushStream) => {
-
-                                expect(pushStream.statusCode).to.equal(200);
-
-                                pushStream.on('data', (data) => {
-
-                                    expect(data.toString()).to.equal('pushed');
-                                    next();
-                                });
-
-                                pushStream.on('end', next);
-                            });
-                        });
-                    }, (err1) => {
-
-                        srv.stop((err2) => done(err1 || err2));
-                    });
-                });
-            });
+        expect(push1ReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me-chain',
+            ':scheme': 'https',
+            'user-agent': 'shot'
         });
+
+        expect(push2ReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(push1ResHeaders[':status']).to.equal(200);
+        expect(push2ResHeaders[':status']).to.equal(200);
+
+        await Promise.all([
+            expectToStream(request, 'body'),
+            expectToStream(pushed1, 'chain'),
+            expectToStream(pushed2, 'pushed')
+        ]);
     });
 
-    it('handles relative path for pushed resource without realm prefix.', { plan: 13 }, (done) => {
+    it('uses original request\'s user-agent to make push-requests.', { plan: 5 }, async (flags) => {
 
-        makeServer([
+        const { server, client } = await makeServer([
             {
                 method: 'get',
                 path: '/',
-                handler: (request, reply) => {
+                handler: (request, h) => {
 
-                    const response = request.generateResponse('body');
-                    reply.push(response, 'push-me');
+                    const response = h.response('body');
+                    h.push(response, '/push-me', { 'x-custom': 'pooh' });
 
-                    reply(response);
+                    return response;
                 }
             },
             {
                 method: 'get',
                 path: '/push-me',
-                handler: (request, reply) => {
+                handler: (request) => 'pushed'
+            }
+        ]);
 
-                    reply('pushed');
+        flags.onCleanup = async () => {
+
+            client.destroy();
+            await server.stop();
+        };
+
+        const request = client.request({ ':path': '/', 'user-agent': 'big-test' });
+
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
+
+        expect(headers[':status']).to.equal(200);
+
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'x-custom': 'pooh',
+            'user-agent': 'big-test'
+        });
+
+        expect(pushResHeaders[':status']).to.equal(200);
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
+    });
+
+    it('uses credentials from original request to make push-requests.', { plan: 9 }, async (flags) => {
+
+        const { server, client } = await makeServer([]);
+
+        Toys.auth.strategy(server, 'custom', (request, h) => {
+
+            const { authorization } = request.headers;
+
+            if (!authorization) {
+                throw Boom.unauthorized(null, 'Custom');
+            }
+
+            return h.authenticated({ credentials: { user: authorization } });
+        });
+
+        server.auth.default('custom');
+
+        server.route([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, h) => {
+
+                    const response = h.response('body');
+                    h.push(response, '/push-me');
+
+                    expect(request.auth.isAuthenticated).to.equal(true);
+                    expect(request.auth.credentials).to.equal({ user: 'harper' });
+
+                    return response;
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request) => {
+
+                    expect(request.auth.isAuthenticated).to.equal(true);
+                    expect(request.auth.credentials).to.equal({ user: 'harper' });
+
+                    return 'pushed';
                 }
             }
-        ],
-        (err, srv, ports) => {
+        ]);
 
-            expect(err).to.not.exist();
-            Items.parallel(ports, (port, nxt) => {
+        flags.onCleanup = async () => {
 
-                const next = callNTimes(4, nxt);
+            client.destroy();
+            await server.stop();
+        };
 
-                const request = Http2.get({ path: '/', port, agent });
+        const request = client.request({ ':path': '/', authorization: 'harper' });
 
-                request.on('response', (response) => {
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
 
-                    expect(response.statusCode).to.equal(200);
+        expect(headers[':status']).to.equal(200);
 
-                    response.on('data', (data) => {
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
 
-                        expect(data.toString()).to.equal('body');
-                        next();
-                    });
+        expect(pushResHeaders[':status']).to.equal(200);
 
-                    response.on('end', next);
-                });
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
+    });
 
-                request.on('push', (promise) => {
+    it('handles relative path for pushed resource with realm prefix.', { plan: 5 }, async (flags) => {
 
-                    expect(promise).to.contain({
-                        method: 'GET',
-                        url: '/push-me',
-                        scheme: 'https',
-                        host: 'localhost'
-                    });
+        const plugin = {
+            name: 'sven',
+            register(srv) {
 
-                    expect(promise.headers).to.equal({
-                        host: 'localhost',
-                        'user-agent': 'shot'
-                    });
+                srv.route([
+                    {
+                        method: 'get',
+                        path: '/',
+                        handler: (request, h) => {
 
-                    promise.on('response', (pushStream) => {
+                            const response = h.response('body');
+                            h.push(response, 'push-me');
 
-                        expect(pushStream.statusCode).to.equal(200);
+                            return response;
+                        }
+                    },
+                    {
+                        method: 'get',
+                        path: '/push-me',
+                        handler: (request) => 'pushed'
+                    }
+                ]);
+            }
+        };
 
-                        pushStream.on('data', (data) => {
+        const { server, client } = await makeServer([]);
 
-                            expect(data.toString()).to.equal('pushed');
-                            next();
-                        });
+        flags.onCleanup = async () => {
 
-                        pushStream.on('end', next);
-                    });
-                });
-            }, (err1) => {
+            client.destroy();
+            await server.stop();
+        };
 
-                srv.stop((err2) => done(err1 || err2));
+        await server.register(plugin, { routes: { prefix: '/pre' } });
+
+        const request = client.request({ ':path': '/pre' });
+
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
+
+        expect(headers[':status']).to.equal(200);
+
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/pre/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(pushResHeaders[':status']).to.equal(200);
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
+    });
+
+    it('handles relative path for pushed resource without realm prefix.', { plan: 5 }, async (flags) => {
+
+        const { server, client } = await makeServer([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, h) => {
+
+                    const response = h.response('body');
+                    h.push(response, 'push-me');
+
+                    return response;
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request) => 'pushed'
+            }
+        ]);
+
+        flags.onCleanup = async () => {
+
+            client.destroy();
+            await server.stop();
+        };
+
+        const request = client.request({ ':path': '/' });
+
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
+
+        expect(headers[':status']).to.equal(200);
+
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(pushResHeaders[':status']).to.equal(200);
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
+    });
+
+    it('h.push() indicates if push was not allowed.', { plan: 4 }, async (flags) => {
+
+        const { server, client: ignore } = await makeServer([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, h) => {
+
+                    const response = h.response('body');
+                    const result = h.push(response, '/push-me');
+
+                    expect(result).to.only.contain(['allowed', 'response']);
+                    expect(result.allowed).to.equal(false);
+                    expect(result.response).to.shallow.equal(response);
+
+                    return response;
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request) => 'pushed'
+            }
+        ]);
+
+        ignore.destroy();
+
+        const client = Http2.connect(server.info.uri, {
+            rejectUnauthorized: false,
+            settings: { enablePush: false }
+        });
+
+        flags.onCleanup = async () => {
+
+            client.destroy();
+            await server.stop();
+        };
+
+        const request = client.request({ ':path': '/' });
+
+        await expectToStream(request, 'body');
+    });
+
+    describe('h.pushAllowed()', () => {
+
+        it('returns false when not using an http2 server.', async (flags) => {
+
+            const server = Hapi.server();
+
+            flags.onCleanup = async () => await server.stop();
+
+            await server.register(Underdog);
+
+            server.route({
+                method: 'get',
+                path: '/',
+                handler: (request, h) => h.pushAllowed()
             });
+
+            await server.start();
+
+            const req = Http.get(`${server.info.uri}`);
+            const res = await Toys.event(req, 'response');
+
+            await expectToStream(res, 'false');
+        });
+
+        it('returns false when falling back to http1.', async (flags) => {
+
+            const server = Hapi.server({
+                tls: true,
+                listener: Http2.createSecureServer({
+                    ...creds,
+                    allowHTTP1: true
+                })
+            });
+
+            flags.onCleanup = async () => await server.stop();
+
+            await server.register(Underdog);
+
+            server.route({
+                method: 'get',
+                path: '/',
+                handler: (request, h) => h.pushAllowed()
+            });
+
+            await server.start();
+
+            const req = Https.get({
+                href: server.info.uri,
+                port: server.info.port,
+                agent: new Https.Agent({ rejectUnauthorized: false })
+            });
+
+            const res = await Toys.event(req, 'response');
+
+            await expectToStream(res, 'false');
+        });
+
+        it('returns false when using http2 but the client doesn\'t support push.', async (flags) => {
+
+            const server = Hapi.server({
+                tls: true,
+                listener: Http2.createSecureServer(creds)
+            });
+
+            await server.register(Underdog);
+
+            server.route({
+                method: 'get',
+                path: '/',
+                handler: (request, h) => h.pushAllowed()
+            });
+
+            await server.start();
+
+            const client = Http2.connect(server.info.uri, {
+                rejectUnauthorized: false,
+                settings: { enablePush: false }
+            });
+
+            flags.onCleanup = async () => {
+
+                client.destroy();
+                await server.stop();
+            };
+
+            const res = client.request({ ':path': '/' });
+
+            await expectToStream(res, 'false');
+        });
+
+        it('returns true when using http2 and the client supports push.', async (flags) => {
+
+            const server = Hapi.server({
+                tls: true,
+                listener: Http2.createSecureServer(creds)
+            });
+
+            await server.register(Underdog);
+
+            server.route({
+                method: 'get',
+                path: '/',
+                handler: (request, h) => h.pushAllowed()
+            });
+
+            await server.start();
+
+            const client = Http2.connect(server.info.uri, {
+                rejectUnauthorized: false
+            });
+
+            flags.onCleanup = async () => {
+
+                client.destroy();
+                await server.stop();
+            };
+
+            const res = client.request({ ':path': '/' });
+
+            await expectToStream(res, 'true');
+        });
+
+        it('works when called in a pushed request.', async (flags) => {
+
+            const server = Hapi.server({
+                tls: true,
+                listener: Http2.createSecureServer(creds)
+            });
+
+            await server.register(Underdog);
+
+            server.route([
+                {
+                    method: 'get',
+                    path: '/',
+                    handler: (request, h) => {
+
+                        const response = h.response('body');
+                        h.push(response, '/push-me');
+
+                        return response;
+                    }
+                },
+                {
+                    method: 'get',
+                    path: '/push-me',
+                    handler: (request, h) => h.pushAllowed()
+                }
+            ]);
+
+            await server.start();
+
+            const client = Http2.connect(server.info.uri, {
+                rejectUnauthorized: false
+            });
+
+            flags.onCleanup = async () => {
+
+                client.destroy();
+                await server.stop();
+            };
+
+            client.request({ ':path': '/' });
+
+            const [[pushed]] = await getPushes(client);
+
+            await expectToStream(pushed, 'true');
         });
     });
 });
