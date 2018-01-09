@@ -10,10 +10,6 @@ Lead Maintainer - [Devin Ivy](https://github.com/devinivy)
 
 Underdog brings [HTTP/2 server-push](http://httpwg.org/specs/rfc7540.html#PushResources) to **hapi v17+**.  The way it works is that you specify paths to resources that you'd like to push alongside a particular response.  This is achieved with a call to the response toolkit decoration [`h.push()`](API.md#hpushresponse-path-headers).  Before hapi responds to the original request, those push-requests will be made internally and their results will be streamed to the client as push-responses.  Even pushed resources can specify additional resources to push.  You can't make this stuff up!
 
-> **Note**
->
-> Under hapi v16 `server.connection({ listener })` must be used rather than `server.connection({ listener, tls: true })`.  This is due to a minor discrepancy between how the node-http2 and node-spdy modules emit new connections compared to a standard node https server.  See [hapijs/hapi#2362](https://github.com/hapijs/hapi/pull/2362) for more info.  The main downside of this is that hapi's `server.info.protocol` incorrectly reports `'http'` rather than `'https'`.
-
 ### Example
 ```js
 const Fs = require('fs');
