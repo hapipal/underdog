@@ -42,10 +42,8 @@
     "boom": "5.x.x",
     "code": "5.x.x",
     "coveralls": "3.x.x",
-    "eslint-config-hapi": "11.x.x",
-    "eslint-plugin-hapi": "4.x.x",
     "hapi": "17.x.x",
-    "lab": "15.x.x",
+    "lab": ">=15.2.0 <16",
     "toys": ">=2.1.1 <3"
   }
 }

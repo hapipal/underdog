@@ -14,10 +14,8 @@ const Underdog = require('..');
 
 // Test shortcuts
 
-const lab = exports.lab = Lab.script();
-const describe = lab.describe;
-const it = lab.it;
-const expect = Code.expect;
+const { describe, it } = exports.lab = Lab.script();
+const { expect } = Code;
 
 const internals = {};
 
@@ -1059,5 +1057,191 @@ describe('Underdog', () => {
 
             await expectToStream(pushed, 'true');
         });
+    });
+
+    it('works with node <9.4.0.', { plan: 9 }, async (flags) => {
+
+        const { server, client } = await makeServer([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, h) => {
+
+                    const { stream } = request.raw.res;
+                    const { pushStream } = stream;
+                    stream.pushStream = (headers, cb) => {
+
+                        pushStream.call(stream, headers, (x, y) => cb(x || y));
+                    };
+
+                    const response = h.response('body');
+                    const result = h.push(response, '/push-me');
+
+                    expect(result).to.only.contain(['allowed', 'response']);
+                    expect(result.allowed).to.equal(true);
+                    expect(result.response).to.shallow.equal(response);
+
+                    return response;
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request, h) => {
+
+                    return h.response('pushed').header('x-custom', 'winnie').code(201);
+                }
+            }
+        ]);
+
+        flags.onCleanup = async () => {
+
+            client.destroy();
+            await server.stop();
+        };
+
+        const request = client.request({ ':path': '/' });
+
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
+
+        expect(headers[':status']).to.equal(200);
+
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(pushResHeaders[':status']).to.equal(201);
+        expect(pushResHeaders['x-custom']).to.equal('winnie');
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
+    });
+
+    it('works with node >=9.4.0.', { plan: 9 }, async (flags) => {
+
+        const { server, client } = await makeServer([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, h) => {
+
+                    const { stream } = request.raw.res;
+                    const { pushStream } = stream;
+                    stream.pushStream = (headers, cb) => {
+
+                        pushStream.call(stream, headers, (x, y) => cb(null, x || y));
+                    };
+
+                    const response = h.response('body');
+                    const result = h.push(response, '/push-me');
+
+                    expect(result).to.only.contain(['allowed', 'response']);
+                    expect(result.allowed).to.equal(true);
+                    expect(result.response).to.shallow.equal(response);
+
+                    return response;
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request, h) => {
+
+                    return h.response('pushed').header('x-custom', 'winnie').code(201);
+                }
+            }
+        ]);
+
+        flags.onCleanup = async () => {
+
+            client.destroy();
+            await server.stop();
+        };
+
+        const request = client.request({ ':path': '/' });
+
+        const [
+            headers,
+            [[pushed, pushReqHeaders, pushResHeaders]]
+        ] = await Promise.all([
+            Toys.event(request, 'response'),
+            getPushes(client)
+        ]);
+
+        expect(headers[':status']).to.equal(200);
+
+        expect(pushReqHeaders).to.contain({
+            ':method': 'GET',
+            ':path': '/push-me',
+            ':scheme': 'https',
+            'user-agent': 'shot'
+        });
+
+        expect(pushResHeaders[':status']).to.equal(201);
+        expect(pushResHeaders['x-custom']).to.equal('winnie');
+
+        await expectToStream(request, 'body');
+        await expectToStream(pushed, 'pushed');
+    });
+
+    it('errors on a failed http2stream.pushStream().', { plan: 5 }, async (flags) => {
+
+        const { server, client } = await makeServer([
+            {
+                method: 'get',
+                path: '/',
+                handler: (request, h) => {
+
+                    const { stream } = request.raw.res;
+                    const { pushStream } = stream;
+                    stream.pushStream = (headers, cb) => {
+
+                        pushStream.call(stream, headers, () => cb(new Error('Oops!')));
+                    };
+
+                    const response = h.response('body');
+                    const result = h.push(response, '/push-me');
+
+                    expect(result).to.only.contain(['allowed', 'response']);
+                    expect(result.allowed).to.equal(true);
+                    expect(result.response).to.shallow.equal(response);
+
+                    return response;
+                }
+            },
+            {
+                method: 'get',
+                path: '/push-me',
+                handler: (request, h) => {
+
+                    return h.response('pushed').header('x-custom', 'winnie').code(201);
+                }
+            }
+        ]);
+
+        flags.onCleanup = async () => {
+
+            client.destroy();
+            await server.stop();
+        };
+
+        const request = client.request({ ':path': '/' });
+
+        const [headers, [ignore, event]] = await Promise.all([ // eslint-disable-line no-unused-vars
+            Toys.event(request, 'response'),
+            Toys.event(server.events, { name: 'request', channels: 'error' }, { error: false, multiple: true })
+        ]);
+
+        expect(headers[':status']).to.equal(500);
+        expect(event.error.message).to.equal('Oops!');
     });
 });
