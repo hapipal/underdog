@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/devinivy/underdog.git"
+    "url": "git+https://github.com/hapipal/underdog.git"
   },
   "keywords": [
     "hapi",
@@ -29,9 +29,9 @@
   "author": "Devin Ivy <devin@bigroomstudios.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/devinivy/underdog/issues"
+    "url": "https://github.com/hapipal/underdog/issues"
   },
-  "homepage": "https://github.com/devinivy/underdog#readme",
+  "homepage": "https://github.com/hapipal/underdog#readme",
   "dependencies": {
     "hoek": "5.x.x"
   },
