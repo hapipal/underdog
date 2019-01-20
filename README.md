@@ -7,8 +7,10 @@ Lead Maintainer - [Devin Ivy](https://github.com/devinivy)
 
 ## Usage
 > See also the [API Reference](API.md)
+>
+> If you would like to utilize underdog with hapi v17, please use underdog v2.
 
-Underdog brings [HTTP/2 server-push](http://httpwg.org/specs/rfc7540.html#PushResources) to **hapi v17+**.  The way it works is that you specify paths to resources that you'd like to push alongside a particular response.  This is achieved with a call to the response toolkit decoration [`h.push()`](API.md#hpushresponse-path-headers).  Before hapi responds to the original request, those push-requests will be made internally and their results will be streamed to the client as push-responses.  Even pushed resources can specify additional resources to push.  You can't make this stuff up!
+Underdog brings [HTTP/2 server-push](http://httpwg.org/specs/rfc7540.html#PushResources) to **hapi v18+**.  The way it works is that you specify paths to resources that you'd like to push alongside a particular response.  This is achieved with a call to the response toolkit decoration [`h.push()`](API.md#hpushresponse-path-headers).  Before hapi responds to the original request, those push-requests will be made internally and their results will be streamed to the client as push-responses.  Even pushed resources can specify additional resources to push.  You can't make this stuff up!
 
 ### Example
 ```js
