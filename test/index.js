@@ -1236,11 +1236,15 @@ describe('Underdog', () => {
 
         const request = client.request({ ':path': '/' });
 
+        // Consumes received data, required to trigger req stream's end
+        // See: https://github.com/nodejs/help/issues/650
         request.on('data', () => {});
 
         const [headers, [ignore, event]] = await Promise.all([ // eslint-disable-line no-unused-vars
             Toys.event(request, 'response'),
             Toys.event(server.events, { name: 'request', channels: 'error' }, { error: false, multiple: true }),
+            // Wait for end, so cleanup doesn't force close any connections,
+            // causing our test to fail w/ an ECONNRESET error
             Toys.event(request, 'end')
         ]);
 
