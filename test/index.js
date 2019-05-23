@@ -6,6 +6,7 @@ const Lab = require('@hapi/lab');
 const Code = require('@hapi/code');
 const Hapi = require('@hapi/hapi');
 const Boom = require('@hapi/boom');
+const Hoek = require('@hapi/hoek');
 const Toys = require('toys');
 const Http = require('http');
 const Https = require('https');
@@ -1238,7 +1239,7 @@ describe('Underdog', () => {
 
         // Consumes received data, required to trigger req stream's end
         // See: https://github.com/nodejs/help/issues/650
-        request.on('data', () => {});
+        request.on('data', Hoek.ignore);
 
         const [headers, [ignore, event]] = await Promise.all([ // eslint-disable-line no-unused-vars
             Toys.event(request, 'response'),
