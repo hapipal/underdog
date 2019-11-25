@@ -2,10 +2,11 @@
 
 // Load modules
 
-const Lab = require('lab');
-const Code = require('code');
-const Hapi = require('hapi');
-const Boom = require('boom');
+const Lab = require('@hapi/lab');
+const Code = require('@hapi/code');
+const Hapi = require('@hapi/hapi');
+const Boom = require('@hapi/boom');
+const Hoek = require('@hapi/hoek');
 const Toys = require('toys');
 const Http = require('http');
 const Https = require('https');
@@ -1230,15 +1231,22 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
+            client.destroy(); // Alternatively, client.close()
             await server.stop();
         };
 
         const request = client.request({ ':path': '/' });
 
+        // Consumes received data, required to trigger req stream's end
+        // See: https://github.com/nodejs/help/issues/650
+        request.on('data', Hoek.ignore);
+
         const [headers, [ignore, event]] = await Promise.all([ // eslint-disable-line no-unused-vars
             Toys.event(request, 'response'),
-            Toys.event(server.events, { name: 'request', channels: 'error' }, { error: false, multiple: true })
+            Toys.event(server.events, { name: 'request', channels: 'error' }, { error: false, multiple: true }),
+            // Wait for end, so cleanup doesn't force close any connections,
+            // causing our test to fail w/ an ECONNRESET error
+            Toys.event(request, 'end')
         ]);
 
         expect(headers[':status']).to.equal(500);

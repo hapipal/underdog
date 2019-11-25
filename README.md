@@ -16,7 +16,7 @@ Underdog brings [HTTP/2 server-push](http://httpwg.org/specs/rfc7540.html#PushRe
 ```js
 const Fs = require('fs');
 const Http2 = require('http2');
-const Hapi = require('hapi');
+const Hapi = require('@hapi/hapi');
 const Underdog = require('underdog');
 
 (async () => {
