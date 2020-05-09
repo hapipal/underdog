@@ -106,8 +106,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -167,8 +171,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -220,8 +228,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -278,8 +290,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -353,8 +369,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -418,8 +438,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -455,8 +479,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -497,8 +525,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -561,8 +593,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -627,8 +663,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/', 'user-agent': 'big-test' });
@@ -704,8 +744,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/', authorization: 'harper' });
@@ -764,8 +808,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         await server.register(plugin, { routes: { prefix: '/pre' } });
@@ -818,8 +866,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -881,8 +933,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -971,8 +1027,12 @@ describe('Underdog', () => {
 
             flags.onCleanup = async () => {
 
-                client.destroy();
-                await server.stop();
+                try {
+                    await server.stop();
+                }
+                finally {
+                    client.destroy();
+                }
             };
 
             const res = client.request({ ':path': '/' });
@@ -1003,8 +1063,12 @@ describe('Underdog', () => {
 
             flags.onCleanup = async () => {
 
-                client.destroy();
-                await server.stop();
+                try {
+                    await server.stop();
+                }
+                finally {
+                    client.destroy();
+                }
             };
 
             const res = client.request({ ':path': '/' });
@@ -1048,8 +1112,12 @@ describe('Underdog', () => {
 
             flags.onCleanup = async () => {
 
-                client.destroy();
-                await server.stop();
+                try {
+                    await server.stop();
+                }
+                finally {
+                    client.destroy();
+                }
             };
 
             client.request({ ':path': '/' });
@@ -1097,8 +1165,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -1164,8 +1236,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.destroy();
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
@@ -1231,8 +1307,12 @@ describe('Underdog', () => {
 
         flags.onCleanup = async () => {
 
-            client.close(); // Needed here rather than client.destroy() to clean things up
-            await server.stop();
+            try {
+                await server.stop();
+            }
+            finally {
+                client.destroy();
+            }
         };
 
         const request = client.request({ ':path': '/' });
