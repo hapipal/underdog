@@ -33,16 +33,16 @@
   },
   "homepage": "https://github.com/hapipal/underdog#readme",
   "dependencies": {
-    "@hapi/hoek": "8.x.x"
+    "@hapi/hoek": "9.x.x"
   },
   "peerDependencies": {
-    "@hapi/hapi": ">=18 <19"
+    "@hapi/hapi": ">=19 <20"
   },
   "devDependencies": {
-    "@hapi/boom": "7.x.x",
-    "@hapi/code": "6.x.x",
-    "@hapi/hapi": "18.x.x",
-    "@hapi/lab": "20.x.x",
+    "@hapi/boom": "9.x.x",
+    "@hapi/code": "8.x.x",
+    "@hapi/hapi": "19.x.x",
+    "@hapi/lab": "22.x.x",
     "coveralls": "3.x.x",
     "toys": ">=2.1.1 <3"
   }
