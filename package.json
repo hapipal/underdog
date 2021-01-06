@@ -4,7 +4,7 @@
   "description": "HTTP/2 server-push for hapi",
   "main": "lib/index.js",
   "engines": {
-    "node": ">=8.9.0"
+    "node": ">=12"
   },
   "directories": {
     "test": "test"
@@ -42,7 +42,7 @@
     "@hapi/boom": "9.x.x",
     "@hapi/code": "8.x.x",
     "@hapi/hapi": "20.x.x",
-    "@hapi/lab": "23.x.x",
+    "@hapi/lab": "24.x.x",
     "coveralls": "3.x.x",
     "toys": ">=2.1.1 <3"
   }
