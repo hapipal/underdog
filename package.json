@@ -43,7 +43,7 @@
     "@hapi/code": "8.x.x",
     "@hapi/hapi": "20.x.x",
     "@hapi/lab": "24.x.x",
-    "coveralls": "3.x.x",
-    "toys": ">=2.1.1 <3"
+    "@hapipal/toys": "3.x.x",
+    "coveralls": "3.x.x"
   }
 }

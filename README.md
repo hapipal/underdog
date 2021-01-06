@@ -1,16 +1,23 @@
 # underdog
 HTTP/2 server-push for hapi
 
-[![Build Status](https://travis-ci.org/hapipal/underdog.svg?branch=master)](https://travis-ci.org/hapipal/underdog) [![Coverage Status](https://coveralls.io/repos/hapipal/underdog/badge.svg?branch=master&service=github)](https://coveralls.io/github/hapipal/underdog?branch=master)
+[![Build Status](https://travis-ci.com/hapipal/underdog.svg?branch=master)](https://travis-ci.com/hapipal/underdog) [![Coverage Status](https://coveralls.io/repos/hapipal/underdog/badge.svg?branch=master&service=github)](https://coveralls.io/github/hapipal/underdog?branch=master)
 
 Lead Maintainer - [Devin Ivy](https://github.com/devinivy)
+
+## Installation
+```sh
+npm install underdog
+```
 
 ## Usage
 > See also the [API Reference](API.md)
 >
-> If you would like to utilize underdog with hapi v17, please use underdog v2.
+> Underdog is intended for use with hapi v19+ and nodejs v12+ (see v4 for lower support).
+>
+> This module is currently under [ad hoc maintenance](https://github.com/hapipal/underdog/issues/17), which means it relies fully on community support.
 
-Underdog brings [HTTP/2 server-push](http://httpwg.org/specs/rfc7540.html#PushResources) to **hapi v18+**.  The way it works is that you specify paths to resources that you'd like to push alongside a particular response.  This is achieved with a call to the response toolkit decoration [`h.push()`](API.md#hpushresponse-path-headers).  Before hapi responds to the original request, those push-requests will be made internally and their results will be streamed to the client as push-responses.  Even pushed resources can specify additional resources to push.  You can't make this stuff up!
+Underdog brings [HTTP/2 server-push](http://httpwg.org/specs/rfc7540.html#PushResources) to hapi.  The way it works is that you specify paths to resources that you'd like to push alongside a particular response.  This is achieved with a call to the response toolkit decoration [`h.push()`](API.md#hpushresponse-path-headers).  Before hapi responds to the original request, those push-requests will be made internally and their results will be streamed to the client as push-responses.  Even pushed resources can specify additional resources to push.  You can't make this stuff up!
 
 ### Example
 ```js
@@ -53,7 +60,7 @@ const Underdog = require('underdog');
             path: '/push-me.js',
             handler: (request) => {
 
-                return 'document.write(\'I was definitely pushed!\');';                
+                return 'document.write(\'I was definitely pushed!\');';
             },
             // To demonstrate that it must have been pushed, not requested directly
             config: { isInternal: true }

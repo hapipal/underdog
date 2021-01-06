@@ -7,7 +7,7 @@ const Code = require('@hapi/code');
 const Hapi = require('@hapi/hapi');
 const Boom = require('@hapi/boom');
 const Hoek = require('@hapi/hoek');
-const Toys = require('toys');
+const Toys = require('@hapipal/toys');
 const Http = require('http');
 const Https = require('https');
 const Http2 = require('http2');
@@ -57,7 +57,7 @@ describe('Underdog', () => {
             content += data.toString();
         });
 
-        await Toys.stream(stream);
+        await Toys.stream(stream, { writable: false });
 
         expect(content).to.equal(expectedContent);
     };
@@ -1126,148 +1126,6 @@ describe('Underdog', () => {
 
             await expectToStream(pushed, 'true');
         });
-    });
-
-    it('works with node <9.4.0.', { plan: 9 }, async (flags) => {
-
-        const { server, client } = await makeServer([
-            {
-                method: 'get',
-                path: '/',
-                handler: (request, h) => {
-
-                    const { stream } = request.raw.res;
-                    const { pushStream } = stream;
-                    stream.pushStream = (headers, cb) => {
-
-                        pushStream.call(stream, headers, (x, y) => cb(x || y));
-                    };
-
-                    const response = h.response('body');
-                    const result = h.push(response, '/push-me');
-
-                    expect(result).to.only.contain(['allowed', 'response']);
-                    expect(result.allowed).to.equal(true);
-                    expect(result.response).to.shallow.equal(response);
-
-                    return response;
-                }
-            },
-            {
-                method: 'get',
-                path: '/push-me',
-                handler: (request, h) => {
-
-                    return h.response('pushed').header('x-custom', 'winnie').code(201);
-                }
-            }
-        ]);
-
-        flags.onCleanup = async () => {
-
-            try {
-                await server.stop();
-            }
-            finally {
-                client.destroy();
-            }
-        };
-
-        const request = client.request({ ':path': '/' });
-
-        const [
-            headers,
-            [[pushed, pushReqHeaders, pushResHeaders]]
-        ] = await Promise.all([
-            Toys.event(request, 'response'),
-            getPushes(client)
-        ]);
-
-        expect(headers[':status']).to.equal(200);
-
-        expect(pushReqHeaders).to.contain({
-            ':method': 'GET',
-            ':path': '/push-me',
-            ':scheme': 'https',
-            'user-agent': 'shot'
-        });
-
-        expect(pushResHeaders[':status']).to.equal(201);
-        expect(pushResHeaders['x-custom']).to.equal('winnie');
-
-        await expectToStream(request, 'body');
-        await expectToStream(pushed, 'pushed');
-    });
-
-    it('works with node >=9.4.0.', { plan: 9 }, async (flags) => {
-
-        const { server, client } = await makeServer([
-            {
-                method: 'get',
-                path: '/',
-                handler: (request, h) => {
-
-                    const { stream } = request.raw.res;
-                    const { pushStream } = stream;
-                    stream.pushStream = (headers, cb) => {
-
-                        pushStream.call(stream, headers, (x, y) => cb(null, x || y));
-                    };
-
-                    const response = h.response('body');
-                    const result = h.push(response, '/push-me');
-
-                    expect(result).to.only.contain(['allowed', 'response']);
-                    expect(result.allowed).to.equal(true);
-                    expect(result.response).to.shallow.equal(response);
-
-                    return response;
-                }
-            },
-            {
-                method: 'get',
-                path: '/push-me',
-                handler: (request, h) => {
-
-                    return h.response('pushed').header('x-custom', 'winnie').code(201);
-                }
-            }
-        ]);
-
-        flags.onCleanup = async () => {
-
-            try {
-                await server.stop();
-            }
-            finally {
-                client.destroy();
-            }
-        };
-
-        const request = client.request({ ':path': '/' });
-
-        const [
-            headers,
-            [[pushed, pushReqHeaders, pushResHeaders]]
-        ] = await Promise.all([
-            Toys.event(request, 'response'),
-            getPushes(client)
-        ]);
-
-        expect(headers[':status']).to.equal(200);
-
-        expect(pushReqHeaders).to.contain({
-            ':method': 'GET',
-            ':path': '/push-me',
-            ':scheme': 'https',
-            'user-agent': 'shot'
-        });
-
-        expect(pushResHeaders[':status']).to.equal(201);
-        expect(pushResHeaders['x-custom']).to.equal('winnie');
-
-        await expectToStream(request, 'body');
-        await expectToStream(pushed, 'pushed');
     });
 
     it('errors on a failed http2stream.pushStream().', { plan: 5 }, async (flags) => {
